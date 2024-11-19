@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Usuários</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* Custom transitions */
+        body,
+        .card,
+        .toggle-btn,
+        .search-input {
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .loading-bar {
+            height: 4px;
+            background: linear-gradient(to right, #4caf50, #8bc34a);
+            animation: loading 2.5s linear infinite;
+        }
+
+        @keyframes loading {
+            from {
+                width: 0%;
+            }
+
+            to {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white font-sans">
+
+    <!-- Main container -->
+    <div class="container mx-auto p-6">
+        <!-- Header Section -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold">Gerenciamento de Usuários</h1>
+
+            <!-- Dark Mode Toggle Button -->
+            <button id="dark-mode-toggle" class="toggle-btn p-2 rounded-md bg-gray-700 hover:bg-gray-600 text-gray-300">
+                <span id="toggle-text">🌙 Ativar Modo Claro</span>
+            </button>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="mb-6 flex flex-col sm:flex-row justify-between items-center">
+            <input type="text" id="search" placeholder="Pesquisar por Nome, ID ou Email..."
+                class="search-input w-full sm:w-2/3 p-3 rounded-md bg-gray-700 text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
+            <a href="/user/view"
+                class="mt-4 sm:mt-0 sm:ml-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                Criar Novo Usuário
+            </a>
+        </div>
+
+        <!-- Filter Count -->
+        <div id="user-count" class="text-gray-400 mb-4 text-sm">
+            <span id="filtered-count"><%= users.length %></span> usuários encontrados.
+        </div>
+
+        <!-- User Cards -->
+        <div id="user-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <% users.forEach(user => { %>
+            <div
+                class="card bg-gray-800 p-6 rounded-lg shadow-lg hover:shadow-2xl transition-transform transform hover:scale-105">
+                <h2 class="card-title text-lg font-semibold text-gray-200 mb-2"><%= user.nome %></h2>
+                <p class="text-sm text-gray-400 mb-2">Email: <span class="text-gray-300"><%= user.email %></span></p>
+                <p class="text-sm text-gray-400 mb-4">ID: <span class="text-gray-300"><%= user.id %></span></p>
+                <p class="text-sm text-gray-400 mb-4">Senha: <span class="text-gray-300"><%= user.senha %></span></p>
+
+
+                <div class="flex justify-between items-center">
+                    <a href="/user/edit/<%= user.id %>"
+                        class="bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded-md shadow-md transition-transform transform hover:scale-105">
+                        Editar
+                    </a>
+                    <form action="/user/delete/<%= user.id %>" method="POST"
+                        onsubmit="return confirmDelete(event, this)">
+                        <button type="submit"
+                            class="bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded-md shadow-md transition-transform transform hover:scale-105">
+                            Deletar
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <% }) %>
+        </div>
+    </div>
+
+    <script>
+        // Toggle Dark/Light Mode
+        document.getElementById('dark-mode-toggle').addEventListener('click', function () {
+            const body = document.body;
+            const toggleText = document.getElementById('toggle-text');
+            const cards = document.querySelectorAll('.card');
+            const inputs = document.querySelectorAll('.search-input, .toggle-btn');
+
+            if (body.classList.contains('bg-gray-900')) {
+                // Light Mode
+                body.classList.replace('bg-gray-900', 'bg-gray-100');
+                body.classList.replace('text-white', 'text-gray-900');
+                cards.forEach(card => {
+                    card.classList.replace('bg-gray-800', 'bg-white');
+                    card.querySelector('.card-title').classList.replace('text-gray-200',
+                        'text-gray-800');
+                });
+                inputs.forEach(input => input.classList.replace('bg-gray-700', 'bg-gray-200'));
+                toggleText.textContent = '🌙 Ativar Modo Escuro';
+            } else {
+                // Dark Mode
+                body.classList.replace('bg-gray-100', 'bg-gray-900');
+                body.classList.replace('text-gray-900', 'text-white');
+                cards.forEach(card => {
+                    card.classList.replace('bg-white', 'bg-gray-800');
+                    card.querySelector('.card-title').classList.replace('text-gray-800',
+                        'text-gray-200');
+                });
+                inputs.forEach(input => input.classList.replace('bg-gray-200', 'bg-gray-700'));
+                toggleText.textContent = '🌞 Ativar Modo Claro';
+            }
+        });
+
+        // Delete Confirmation with Loading Animation
+        function confirmDelete(event, form) {
+            event.preventDefault();
+
+            Swal.fire({
+                title: 'Deletando...',
+                html: '<div class="loading-bar"></div>',
+                width: '300px', // Tamanho reduzido
+                position: 'bottom-end', // Canto inferior direito
+                timer: 2500,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                background: '#333', // Fundo escuro para combinar com o tema
+                color: '#fff', // Cor do texto clara
+                didOpen: () => {
+                    setTimeout(() => {
+                        form.submit();
+                    }, 2500);
+                }
+            });
+
+
+            return false;
+        }
+
+        // Search Functionality
+        document.getElementById('search').addEventListener('input', function (event) {
+            const filter = event.target.value.toLowerCase();
+            const cards = document.querySelectorAll('#user-cards > .card');
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                const name = card.querySelector('h2').innerText.toLowerCase();
+                const email = card.querySelector('p:nth-child(2) span').innerText.toLowerCase();
+                const id = card.querySelector('p:nth-child(3) span').innerText.toLowerCase();
+
+                if (name.includes(filter) || email.includes(filter) || id.includes(filter)) {
+                    card.style.display = '';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            document.getElementById('filtered-count').innerText = visibleCount;
+        });
+    </script>
+
+</body>
+
+</html>
